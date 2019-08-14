@@ -1,4 +1,7 @@
-﻿using Ardalis.ListStartupServices;
+﻿using Google.Cloud.AspNetCore.DataProtection.Kms;
+using Google.Cloud.AspNetCore.DataProtection.Storage;
+
+using Ardalis.ListStartupServices;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
@@ -27,6 +30,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
+using System.Text;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Microsoft.eShopWeb.Web
 {
@@ -43,10 +48,10 @@ namespace Microsoft.eShopWeb.Web
         public void ConfigureDevelopmentServices(IServiceCollection services)
         {
             // use in-memory database
-            ConfigureInMemoryDatabases(services);
+            // ConfigureInMemoryDatabases(services);
 
             // use real database
-            // ConfigureProductionServices(services);
+            ConfigureProductionServices(services);
         }
 
         private void ConfigureInMemoryDatabases(IServiceCollection services)
@@ -76,8 +81,6 @@ namespace Microsoft.eShopWeb.Web
 
             ConfigureServices(services);
         }
-
-
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -140,6 +143,18 @@ namespace Microsoft.eShopWeb.Web
 
                 config.Path = "/allservices";
             });
+
+            // Antiforgery tokens require data protection.
+            services.AddDataProtection()
+                // Store keys in Cloud Storage so that multiple instances
+                // of the web application see the same keys.
+                .PersistKeysToGoogleCloudStorage(
+                    Configuration["DataProtection:Bucket"],
+                    Configuration["DataProtection:Object"])
+                // Protect the keys with Google KMS for encryption and fine-
+                // grained access control.
+                .ProtectKeysWithGoogleKms(
+                    Configuration["DataProtection:KmsKeyName"]);
 
             _services = services; // used to debug registered services
         }
